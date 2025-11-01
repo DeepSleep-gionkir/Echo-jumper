@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>👻 에코 점퍼 (v5.2 - UI/Game Fix)</title>
+    <title>👻 에코 점퍼 (v6.0 - Push & Pull)</title>
     <style>
         /* --- 기본 및 레이아웃 --- */
         html, body {
@@ -24,12 +24,13 @@
         #game-container {
             position: relative;
             width: 100%;
-            max-width: 600px; /* (수정됨) 500 -> 600 */
+            max-width: 800px; /* (수정) PC 화면 확장 */
             height: 100%;
-            max-height: 850px; /* (수정됨) 800 -> 850 */
+            max-height: 900px; /* (수정) PC 화면 확장 */
             overflow: hidden;
             background-color: #2a2a3e; /* 묘지 배경색 */
             border: 2px solid #50507a;
+            transition: background-color 0.1s; /* 레벨업 플래시용 */
         }
 
         #game-canvas {
@@ -138,16 +139,14 @@
             height: 100%;
             background-color: rgba(10, 10, 20, 0.95);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
             transition: opacity 0.3s ease, visibility 0.3s;
             visibility: hidden;
             opacity: 0;
             z-index: 10;
-            padding: 20px; /* ◀◀◀ (수정) 추가 */
-            box-sizing: border-box; /* ◀◀◀ (수정) 추가 */
         }
 
         .overlay.visible {
@@ -166,6 +165,7 @@
             max-height: 90%; 
             overflow: hidden; 
         }
+
 
         /* --- 시작/종료 오버레이 --- */
         #game-overlay h1 {
@@ -228,14 +228,14 @@
             display: none; 
             flex-grow: 1; 
             width: 100%;
-            max-width: 450px; /* (수정) 너비 살짝 늘림 */
+            max-width: 500px; /* (수정) 너비 늘림 */
             overflow-y: auto; 
             text-align: left;
             padding: 10px;
             padding-right: 20px; 
             border-top: 1px solid #50507a;
             border-bottom: 1px solid #50507a;
-            box-sizing: border-box; /* ◀◀◀ v4.0에서 빠졌던 것 추가 */
+            box-sizing: border-box;
         }
         
         #instructions h3 {
@@ -286,8 +286,8 @@
             padding: 15px;
             cursor: pointer;
             transition: background-color 0.2s;
-            text-align: center; /* ◀◀◀ (수정) 추가 */
-            box-sizing: border-box; /* ◀◀◀ (수정) 추가 */
+            text-align: center; 
+            box-sizing: border-box; 
         }
         
         .upgrade-card:hover {
@@ -358,13 +358,14 @@
                         <li><b>대시/빙의/해제:</b> 화면 아무 곳이나 <code>짧게 탭(Tap)</code>합니다.</li>
                     </ul>
                     
-                    <h3>1. 기본 플레이 방법</h3>
+                    <h3>1. 기본 플레이 방법 (Push & Pull)</h3>
                     <ul>
                         <li><b>게임 목표:</b> 맵 중앙의 <b>'영혼 핵(💎)'</b>을 몬스터로부터 지키는 것입니다. 핵의 HP가 0이 되면 게임 오버입니다.</li>
-                        <li><b>유령 (🔵):</b> 플레이어의 기본 상태입니다. 이 상태에서는 <b>무적</b>이지만, 공격할 수 없습니다. 적진을 뚫고 경험치(💎)를 수집할 수 있습니다.</li>
-                        <li><b>빙의 (Push):</b> 유령 상태에서 탭/클릭하면 가장 가까운 적에게 '빙의'합니다.</li>
-                        <li><b>숙주 (◻️🔵):</b> 빙의에 성공하면, '푸른색 숙주'가 되어 자동으로 공격합니다. <b>하지만, 이 상태에서는 적에게 닿으면 빙의 게이지가 깎입니다!</b></li>
+                        <li><b>유령 (🔵):</b> 플레이어의 기본 상태입니다. 이 상태에서는 <b>무적</b>이며 <b>경험치(💎)를 수집</b>할 수 있습니다.</li>
+                        <li><b>숙주 (◻️🔵):</b> <b>공격</b>을 할 수 있는 유일한 상태입니다. <b>경험치를 수집할 수 없습니다.</b></li>
+                        <li><b>빙의 (Push):</b> 유령 상태에서 탭/클릭하면 가장 가까운 적에게 **빠르게 돌진**하여 '빙의'합니다.</li>
                         <li><b>빙의 해제 (Pull):</b> 숙주 상태에서 탭/클릭하면, <b>즉시 빙의를 해제</b>하고 안전한 '무적 유령' 상태로 돌아옵니다.</li>
+                        <li><b>(중요) 숙주 피격:</b> 숙주 상태에서 적과 닿으면, 게이지가 추가로 <b>더 빨리 닳습니다!</b></li>
                     </ul>
                     
                     <h3>2. 몬스터(숙주) 특징</h3>
@@ -372,17 +373,16 @@
                         <li><b>◻️ 스켈레톤 (HP: 2):</b> [밸런스형] 가까운 적에게 뼈다귀를 던집니다.</li>
                         <li><b>🟩 좀비 (HP: 5):</b> [광역/방어형] 주변에 '부패 오라'를 방출합니다. 게이지가 매우 깁니다.</li>
                         <li><b>🟪 박쥐 (HP: 1):</b> [기동/관통형] 가까운 적에게 빠른 '초음파'를 쏩니다. 이동 속도가 빠릅니다.</li>
-                        <li><b>🩶 가고일 (HP: 10):</b> [광역/방어형] <b>(수정)</b> 2초마다 주변에 '지진'을 일으켜 피해를 줍니다. 게이지가 매우 깁니다.</li>
+                        <li><b>🩶 가고일 (HP: 10):</b> [광역/방어형] 2초마다 주변에 '지진'을 일으켜 피해를 줍니다. 게이지가 매우 깁니다.</li>
+                        <li><b>🟢 슬라임 (HP: 6):</b> [탱커] 느린 '슬라임볼'을 쏩니다. 매우 느리고 튼튼합니다.</li>
+                        <li><b>❤️ 임프 (HP: 1):</b> [유리대포] 강력한 '파이어볼'을 쏩니다. 빠르지만 게이지가 짧습니다.</li>
                     </ul>
                     
                     <h3>⭐ 3. 엘리트 몬스터 ⭐</h3>
                     <ul>
                         <li>낮은 확률로 <b>노란색(🟡)</b>으로 빛나며 <b>왕관(👑)</b>을 쓴 '엘리트' 몬스터가 등장합니다. (HP 2배)</li>
                         <li>엘리트 몬스터에게 빙의하면 <b>강화된 스킬</b>을 사용합니다!</li>
-                        <li><b>👑 엘리트 스켈레톤:</b> "트리플 샷" (뼈다귀 3발 발사)</li>
-                        <li><b>👑 엘리트 좀비:</b> "광역 부패" (오라 범위 1.5배)</li>
-                        <li><b>👑 엘리트 박쥐:</b> "소닉 스프레드" (초음파 3발 발사)</li>
-                        <li><b>👑 엘리트 가고일:</b> "영혼 수복" (지진 + 빙의 중 <b>영혼 핵 HP</b> 서서히 회복)</li>
+                        <li>(예: "트리플 샷", "영혼 수복" 등)</li>
                     </ul>
                 </div>
                 
@@ -439,7 +439,7 @@
             // --- 캔버스 크기 ---
             const VIEWPORT_WIDTH = gameContainer.clientWidth;
             const VIEWPORT_HEIGHT = gameContainer.clientHeight;
-            const PIXEL_SCALE = 3; // (수정) 2 -> 3으로 키워서 그래픽 크게
+            const PIXEL_SCALE = 3; 
             canvas.width = VIEWPORT_WIDTH;
             canvas.height = VIEWPORT_HEIGHT;
             ctx.imageSmoothingEnabled = false;
@@ -463,8 +463,9 @@
 
             // --- 몬스터/플레이어/업그레이드 정의 (수정됨) ---
             const PLAYER_COLOR = '#00FFFF';
-            const PLAYER_RADIUS = 4 * PIXEL_SCALE; 
-            const PLAYER_SPEED_WISP = 2.5;
+            const PLAYER_RADIUS = 3 * PIXEL_SCALE; // (수정) 4 -> 3
+            const PLAYER_SPEED_WISP = 3.0; // (수정) 2.5 -> 3.0
+            const PLAYER_DASH_SPEED = 10; // (새로 추가)
             const ELITE_COLOR = '#FFFF00'; 
             const CROWN_SPRITE = ['111','101','010']; 
 
@@ -476,7 +477,11 @@
                 'bat': { gauge: 600, attackType: 'sonic', attackCooldown: 40, speed: 2.5, hp: 1, exp: 10, 
                     sprite: ['10101','01110','00100'], color: '#9400D3' }, 
                 'gargoyle': { gauge: 4000, attackType: 'stomp', attackCooldown: 120, speed: 0.5, hp: 10, exp: 30,
-                    sprite: ['01110','11111','11011','01110','01010'], color: '#888888' }
+                    sprite: ['01110','11111','11011','01110','01010'], color: '#888888' },
+                'slime': { gauge: 1500, attackType: 'slimeball', attackCooldown: 80, speed: 0.5, hp: 6, exp: 25, 
+                    sprite: ['0110','1111','1111','0110'], color: '#ADFF2F' }, 
+                'imp': { gauge: 700, attackType: 'fireball', attackCooldown: 100, speed: 2.0, hp: 1, exp: 15, 
+                    sprite: ['101','010','101'], color: '#FF4500' } 
             };
             const MOB_TYPES = Object.keys(MOB_PROPERTIES);
             
@@ -485,11 +490,13 @@
                 { id: 'wisp_speed_1', title: '유령 기동력 I', desc: '유령 상태의 이동 속도가 10% 증가합니다.', apply: () => player.stats.wispSpeedMult += 0.1 },
                 { id: 'jump_nova', title: '소울 노바', desc: '새로운 숙주로 \'빙의\'할 때 주변에 폭발을 일으킵니다.', apply: () => player.stats.jumpNova = true },
                 { id: 'attack_speed_1', title: '공격 속도 I', desc: '숙주의 공격 속도가 10% 증가합니다.', apply: () => player.stats.attackSpeedMult += 0.1 },
-                { id: 'aura_size_1', title: '부패 오라 확장 I', desc: '좀비의 오라 범위가 15% 증가합니다.', apply: () => player.stats.auraSizeMult += 0.15 },
-                { id: 'bone_damage_1', title: '날카로운 뼈 I', desc: '스켈레톤의 뼈 데미지가 1 증가합니다.', apply: () => player.stats.boneDamage += 1 },
-                { id: 'sonic_damage_1', title: '초음파 강화 I', desc: '박쥐의 초음파 데미지가 1 증가합니다.', apply: () => player.stats.sonicDamage += 1 },
                 { id: 'core_hp_1', title: '영혼 핵 강화 I', desc: '영혼 핵의 최대 HP가 20% 증가합니다.', apply: () => {soulCore.maxHp *= 1.2; soulCore.heal(soulCore.maxHp * 0.2);} },
                 { id: 'elite_chance_1', title: '불안정한 영혼', desc: '엘리트 몬스터 등장 확률이 5% 증가합니다.', apply: () => eliteSpawnChance += 0.05 },
+                { id: 'bone_damage_1', title: '날카로운 뼈 I', desc: '스켈레톤의 뼈 데미지가 1 증가합니다.', apply: () => player.stats.boneDamage += 1 },
+                { id: 'sonic_damage_1', title: '초음파 강화 I', desc: '박쥐의 초음파 데미지가 1 증가합니다.', apply: () => player.stats.sonicDamage += 1 },
+                { id: 'aura_size_1', title: '부패 오라 확장 I', desc: '좀비의 오라 범위가 15% 증가합니다.', apply: () => player.stats.auraSizeMult += 0.15 },
+                { id: 'imp_damage_1', title: '지옥불 I', desc: '임프의 파이어볼 데미지가 2 증가합니다.', apply: () => player.stats.fireballDamage += 2 },
+                { id: 'slime_slow_1', title: '강력 접착액', desc: '슬라임볼에 맞은 적이 1초간 느려집니다.', apply: () => player.stats.slimeSlow = true },
             ];
             let currentUpgradeChoices = [];
 
@@ -497,7 +504,7 @@
             function drawPixelSprite(spriteData, x, y, colorTint, isElite = false) {
                 const spriteHeight = spriteData.length;
                 const spriteWidth = spriteData[0].length;
-                const scale = PIXEL_SCALE * (isElite ? 1.5 : 1); // 엘리트는 1.5배 크게
+                const scale = PIXEL_SCALE * (isElite ? 1.5 : 1); 
                 
                 const startX = Math.floor(x - (spriteWidth * scale) / 2);
                 const startY = Math.floor(y - (spriteHeight * scale) / 2);
@@ -547,6 +554,8 @@
                     this.experience = 0;
                     this.expToNextLevel = 100;
                     
+                    this.dashTarget = null; // (새로 추가)
+                    
                     this.stats = {
                         maxGaugeMult: 1.0,
                         wispSpeedMult: 1.0,
@@ -555,16 +564,22 @@
                         auraSizeMult: 1.0,
                         boneDamage: 1,
                         sonicDamage: 1,
+                        fireballDamage: 2,
+                        slimeSlow: false,
                     };
                 }
 
                 draw() {
                     ctx.shadowBlur = 10; 
-                    if (this.state === 'WISP' || this.state === 'UNPOSSESSING') {
+                    if (this.state === 'WISP' || this.state === 'UNPOSSESSING' || this.state === 'DASHING') {
                         ctx.fillStyle = PLAYER_COLOR;
                         ctx.shadowColor = PLAYER_COLOR;
                         if(this.unpossessTimer > 0 && frameCount % 10 < 5) {
                              ctx.globalAlpha = 0.5; 
+                        }
+                        if (this.state === 'DASHING') { // 돌진 이펙트
+                            ctx.globalAlpha = 0.5;
+                            particles.push(new Particle(this.x, this.y, 0, 0, 10, PLAYER_COLOR, 'trail'));
                         }
                         ctx.beginPath();
                         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -585,7 +600,30 @@
                     }
                     if (this.dashCooldown > 0) this.dashCooldown--;
 
-                    // 이동
+                    // (수정) 돌진(DASHING) 상태
+                    if (this.state === 'DASHING') {
+                        if (!this.dashTarget || this.dashTarget.hp <= 0) { // 타겟이 죽거나 사라짐
+                            this.state = 'WISP';
+                            this.dashTarget = null;
+                            return;
+                        }
+                        
+                        const dx = this.dashTarget.x - this.x;
+                        const dy = this.dashTarget.y - this.y;
+                        const dist = Math.hypot(dx, dy);
+                        
+                        if (dist < this.radius + this.dashTarget.radius) {
+                            // 빙의 성공
+                            this.possess(this.dashTarget);
+                        } else {
+                            // 돌진 이동
+                            this.x += (dx / dist) * PLAYER_DASH_SPEED;
+                            this.y += (dy / dist) * PLAYER_DASH_SPEED;
+                        }
+                        return; // 돌진 중에는 다른 로직 수행 안 함
+                    }
+
+                    // 이동 (WISP 또는 HOST)
                     const dx = targetPos.x - this.x;
                     const dy = targetPos.y - this.y;
                     const dist = Math.hypot(dx, dy);
@@ -653,28 +691,42 @@
                                 }
                             }
                             break;
-                        case 'gargoyle': // (새로 추가)
+                        case 'gargoyle': 
                             const stompRadius = 70;
                             particles.push(new Particle(this.x, this.y, 0, 0, 15, '#888888', 'shockwave', stompRadius));
                             enemies.forEach(enemy => {
                                 if (Math.hypot(this.x - enemy.x, this.y - enemy.y) < stompRadius) {
-                                    enemy.takeDamage(2); // 지진 데미지 2
+                                    enemy.takeDamage(2); 
                                 }
                             });
+                            break;
+                        case 'slime': 
+                            if(target) {
+                                projectiles.push(new Projectile(this.x, this.y, target, 'slimeball', 1, null, this.stats.slimeSlow));
+                            }
+                            break;
+                        case 'imp': 
+                             if(target) {
+                                projectiles.push(new Projectile(this.x, this.y, target, 'fireball', this.stats.fireballDamage));
+                            }
                             break;
                     }
                 }
                 
                 dash() {
                     if (this.dashCooldown > 0) return; 
-                    this.dashCooldown = 30; 
                     
                     if (this.state === 'HOST') {
+                        // (수정) 자유로운 빙의 해제
+                        this.dashCooldown = 30; // 0.5초 쿨타임
                         this.unpossess();
-                    } else {
+                    } else if (this.state === 'WISP') {
+                        // (수정) 돌진 시작
                         let closestEnemy = findNearestEnemy(this.x, this.y, 150); 
                         if (closestEnemy) {
-                            this.possess(closestEnemy);
+                            this.state = 'DASHING';
+                            this.dashTarget = closestEnemy;
+                            this.dashCooldown = 60; // 돌진 쿨타임
                         }
                     }
                 }
@@ -697,6 +749,7 @@
                     this.y = enemy.y;
                     targetPos.x = this.x; 
                     targetPos.y = this.y;
+                    this.dashTarget = null;
                     
                     gaugeContainer.style.display = 'block';
                     enemies = enemies.filter(e => e !== enemy);
@@ -777,10 +830,21 @@
                     ctx.shadowBlur = 0;
                 }
                 update() {
-                    const dx = soulCore.x - this.x;
-                    const dy = soulCore.y - this.y;
+                    // (수정) 몹 AI: 숙주/핵 중 가까운 곳 공격
+                    let target = soulCore;
+                    const distToCore = Math.hypot(soulCore.x - this.x, soulCore.y - this.y);
+                    
+                    if (player.state === 'HOST') {
+                        const distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
+                        if (distToPlayer < distToCore) {
+                            target = player;
+                        }
+                    }
+
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
                     const dist = Math.hypot(dx, dy);
-                    if (dist > this.radius + soulCore.radius) { 
+                    if (dist > this.radius + target.radius) { 
                         this.x += dx / dist * this.speed * 0.5; 
                         this.y += dy / dist * this.speed * 0.5;
                     }
@@ -803,14 +867,22 @@
             }
             
             class Projectile {
-                constructor(x, y, target, type, damage, direction = null) {
+                constructor(x, y, target, type, damage, direction = null, slow = false) {
                     this.x = x;
                     this.y = y;
                     this.type = type;
                     this.damage = damage;
+                    this.slow = slow; 
                     this.radius = 2 * PIXEL_SCALE;
-                    this.speed = (type === 'sonic') ? 8 : 5;
+                    this.speed = 5;
                     this.life = 60; 
+                    
+                    if (type === 'sonic') this.speed = 8;
+                    if (type === 'slimeball') this.speed = 3;
+                    if (type === 'fireball') {
+                        this.speed = 4;
+                        this.damage = damage;
+                    }
                     
                     if (direction) { 
                         this.dx = direction.dx * this.speed;
@@ -843,6 +915,20 @@
                             ctx.shadowColor = '#9400D3';
                             ctx.fillRect(this.x - 4, this.y - 1, 8, 2); 
                             break;
+                        case 'slimeball': 
+                            ctx.fillStyle = '#ADFF2F';
+                            ctx.shadowColor = '#ADFF2F';
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, 3 * PIXEL_SCALE, 0, Math.PI*2);
+                            ctx.fill();
+                            break;
+                        case 'fireball': 
+                            ctx.fillStyle = '#FF4500';
+                            ctx.shadowColor = '#FF4500';
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, 4 * PIXEL_SCALE, 0, Math.PI*2);
+                            ctx.fill();
+                            break;
                         case 'explosion':
                             ctx.strokeStyle = '#FFFF00';
                             ctx.lineWidth = 3;
@@ -867,7 +953,7 @@
                     this.x = x;
                     this.y = y;
                     this.value = value;
-                    this.radius = 3 * PIXEL_SCALE;
+                    this.radius = 2 * PIXEL_SCALE; // (수정) 3 -> 2
                     this.color = '#FFFF00'; 
                     this.pickupRadius = 60;
                 }
@@ -881,6 +967,7 @@
                     ctx.shadowBlur = 0;
                 }
                 update() {
+                    // (수정) '유령' 상태일 때만 끌어당김
                     if (player.state === 'WISP' || player.state === 'UNPOSSESSING') {
                         const dist = Math.hypot(player.x - this.x, player.y - this.y);
                         if (dist < this.pickupRadius) {
@@ -922,6 +1009,11 @@
                         ctx.globalAlpha = 0.2; 
                         ctx.beginPath();
                         ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+                        ctx.fill();
+                    } else if (this.type === 'trail') {
+                         ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.life / 5, 0, Math.PI*2); // 점점 작아짐
                         ctx.fill();
                     }
                     ctx.globalAlpha = 1.0;
@@ -1137,7 +1229,7 @@
             }
             
             function checkCollisions() {
-                // 1. 유령 vs 적 -> (이제 충돌 없음)
+                // 1. 유령/돌진 vs 적 -> 충돌 없음 (무적)
                 
                 // 2. 숙주 + 적 -> 게이지 대미지
                 if (player.state === 'HOST') {
@@ -1154,7 +1246,7 @@
                     if (Math.hypot(e.x - soulCore.x, e.y - soulCore.y) < e.radius + soulCore.radius) {
                         soulCore.hp -= e.props.hp; 
                         updateCoreHpBar();
-                        e.die(); 
+                        e.die(false); // (수정) 핵에 닿아 죽으면 경험치 안 줌
                         
                         if (soulCore.hp <= 0) {
                             endGame();
@@ -1181,11 +1273,12 @@
                     }
                 }
                 
-                // 5. 플레이어 + 에코
+                // 5. 플레이어 + 에코 (수정됨)
                 for (let i = echoes.length - 1; i >= 0; i--) {
                     const e = echoes[i];
+                    // (수정) 유령 상태일 때만 경험치 획득
                     if ((player.state === 'WISP' || player.state === 'UNPOSSESSING') &&
-                        Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius + 30) // (픽업 범위 증가)
+                        Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius + 30) 
                     {
                         player.collectExp(e.value);
                         echoes.splice(i, 1);
