@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>👻 에코 점퍼 (v2.0)</title>
+    <title>👻 에코 점퍼 (v4.0 - 몹 복원)</title>
     <style>
         /* --- 기본 및 레이아웃 --- */
         html, body {
@@ -12,13 +12,13 @@
             height: 100vh;
             height: 100dvh;
             overflow: hidden;
-            background-color: #1a1a2e; /* 어두운 남색 밤하늘 */
+            background-color: #000; /* 검은색 배경 */
             color: white;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            touch-action: none; /* 모바일 스크롤/줌 방지 */
+            font-family: 'DotGothic16', 'Courier New', monospace; /* 픽셀 폰트 */
+            touch-action: none; 
         }
 
         #game-container {
@@ -35,6 +35,10 @@
         #game-canvas {
             display: block;
             cursor: none;
+            /* 픽셀이 흐릿해지는 것 방지 */
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
         }
 
         /* --- UI 영역 --- */
@@ -51,17 +55,17 @@
         #gauge-container {
             width: 100%;
             height: 25px;
-            background-color: rgba(0, 0, 0, 0.3);
+            background-color: rgba(0, 0, 0, 0.5);
             border: 2px solid #fff;
-            border-radius: 15px;
+            border-radius: 0; /* 픽셀 스타일 */
             overflow: hidden;
-            display: none; /* 유령 상태일 땐 숨김 */
+            display: none; 
         }
 
         #gauge-bar {
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, #00FFFF, #00BFFF);
+            background-color: #00FFFF; /* 시안색 */
             transition: width 0.1s linear;
         }
 
@@ -77,60 +81,56 @@
             font-size: 1.5em;
             font-weight: bold;
             color: #fff;
-            text-shadow: 0 0 5px #000;
+            text-shadow: 2px 2px #000;
             z-index: 5;
-            pointer-events: none; /* UI가 터치/클릭 방해하지 않도록 */
+            pointer-events: none; 
+        }
+        
+        /* 경험치 바 */
+        #exp-bar {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 5px;
+            background-color: #FFFF00; /* 노란색 */
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.2s ease;
+            z-index: 6;
         }
 
-        /* --- 오버레이 및 정보창 (대폭 수정) --- */
-        #game-overlay {
+        /* --- 오버레이 공통 --- */
+        .overlay {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(10, 10, 20, 0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            transition: opacity 0.5s ease, visibility 0.5s;
-            visibility: visible;
-            opacity: 1;
-            z-index: 10;
-        }
-
-        #game-overlay.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
-        
-        /* 오버레이 내부 콘텐츠 래퍼 */
-        #overlay-content-wrapper {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
-            width: 100%;
-            height: 100%;
-            max-height: 90%; /* 콘텐츠가 너무 길어지는 것 방지 */
-            overflow: hidden; /* 내부 스크롤은 #instructions가 담당 */
+            transition: opacity 0.3s ease, visibility 0.3s;
+            visibility: hidden;
+            opacity: 0;
+            z-index: 10;
         }
 
-        #overlay-content-wrapper h1 {
+        .overlay.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* --- 시작/종료 오버레이 --- */
+        #game-overlay h1 {
             color: #00FFFF; /* 네온 시안 */
-            margin-top: 0;
             margin-bottom: 10px;
-            flex-shrink: 0;
         }
 
-        #overlay-content-wrapper p {
+        #game-overlay p {
             font-size: 1.1em;
-            margin: 10px 0;
-            flex-shrink: 0;
+            margin: 10px 20px;
         }
 
         #start-button {
@@ -139,12 +139,11 @@
             font-weight: bold;
             color: #1a1a2e;
             background-color: #00FFFF;
-            border: none;
-            border-radius: 10px;
+            border: 2px solid #fff;
+            border-radius: 0; /* 픽셀 스타일 */
             cursor: pointer;
             box-shadow: 0 0 20px #00FFFF;
             margin-top: 20px;
-            flex-shrink: 0;
         }
 
         #final-score {
@@ -152,81 +151,58 @@
             font-weight: bold;
             color: #FF00FF; /* 네온 마젠타 */
             margin: 10px 0;
-            flex-shrink: 0;
         }
         
-        /* 정보 버튼 */
-        #info-button {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid #fff;
-            border-radius: 50%;
-            color: white;
-            font-size: 1.5em;
-            font-weight: bold;
+        /* --- 레벨 업 오버레이 (새로 추가) --- */
+        #level-up-overlay {
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        #level-up-title {
+            color: #FFFF00;
+            font-size: 2em;
+            text-shadow: 2px 2px #000;
+        }
+        
+        .upgrade-card {
+            width: 80%;
+            max-width: 300px;
+            background-color: #1a1a2e;
+            border: 3px solid #00FFFF;
+            padding: 15px;
             cursor: pointer;
-            z-index: 11;
+            transition: background-color 0.2s;
         }
         
-        /* 상세 '게임 방법' UI (대폭 수정) */
-        #instructions {
-            display: none; /* 평소엔 숨김 */
-            flex-grow: 1; /* 남는 공간을 모두 차지 */
-            width: 100%;
-            max-width: 400px; /* 가독성 위한 최대 너비 */
-            overflow-y: auto; /* *** 여기가 스크롤을 담당 *** */
-            text-align: left;
-            padding: 10px;
-            padding-right: 20px; /* 스크롤바 공간 */
-            border-top: 1px solid #50507a;
-            border-bottom: 1px solid #50507a;
+        .upgrade-card:hover {
+            background-color: #3a3a5e;
         }
         
-        #instructions h3 {
-            color: #00FFFF;
-            border-bottom: 1px solid #00FFFF;
-            padding-bottom: 5px;
-            margin-top: 15px;
-            margin-bottom: 10px;
+        .upgrade-card h3 {
+            margin: 0 0 10px 0;
+            color: #FFFF00;
         }
         
-        #instructions ul {
-            padding-left: 20px;
-            margin: 0 0 15px 0;
+        .upgrade-card p {
+            margin: 0;
+            font-size: 1em;
+            color: #eee;
         }
-        
-        #instructions li {
-            margin-bottom: 10px;
-            line-height: 1.5;
-        }
-        
-        #instructions b {
-            color: #FFFF00; /* 노란색 강조 */
-        }
-        
-        #instructions code {
-            background-color: #000;
-            padding: 2px 5px;
-            border-radius: 3px;
-        }
+
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <div id="game-container">
         
-        <button id="info-button">?</button>
-
         <div id="top-ui">
             <div id="score">Score: 0</div>
             <div id="level">Lv. 1</div>
         </div>
-
-        <canvas id="game-canvas"></canvas>
+        
+        <div id="exp-bar"></div> <canvas id="game-canvas"></canvas>
 
         <div id="ui-container">
             <div id="gauge-container">
@@ -234,53 +210,31 @@
             </div>
         </div>
         
-        <div id="game-overlay" data-mode="start">
+        <div id="game-overlay" class="overlay visible">
             <div id="overlay-content-wrapper">
                 <h1>👻 에코 점퍼 👻</h1>
                 <p id="overlay-message">
                     적의 몸을 빼앗아 싸우세요!<br>
                     숙주가 파괴되기 전에 다음 적으로 '점프'하세요.
                 </p>
-                
-                <div id="instructions">
-                    <h3>🕹️ 조작 방법 (Controls)</h3>
-                    <h4>🖥️ PC (키보드 + 마우스)</h4>
-                    <ul>
-                        <li><b>이동:</b> 마우스 커서를 움직여 해당 방향으로 이동합니다.</li>
-                        <li><b>대시/빙의:</b> <code>마우스 왼쪽 클릭</code>을 하여 가장 가까운 적에게 대시/빙의합니다.</li>
-                    </ul>
-                    <h4>📱 모바일 (터치스크린)</h4>
-                    <ul>
-                        <li><b>이동:</b> 화면 아무 곳이나 <code>손가락으로 드래그</code>하여 해당 방향으로 이동합니다.</li>
-                        <li><b>대시/빙의:</b> 화면 아무 곳이나 <code>짧게 탭(Tap)</code>하여 가장 가까운 적에게 대시/빙의합니다.</li>
-                    </ul>
-                    
-                    <h3>1. 기본 플레이 방법</h3>
-                    <ul>
-                        <li>플레이어는 공격 능력이 없는 <b>'유령 (🔵)'</b> 상태로 시작합니다. 유령 상태에서 적과 닿으면 <b>즉시 게임 오버</b>입니다.</li>
-                        <li>'대시'로 몬스터(예: <code>◻️</code>)에게 닿으면 <b>'빙의'</b>합니다.</li>
-                        <li>빙의에 성공하면, 플레이어는 <b>'푸른색 숙주 (◻️🔵)'</b>가 되어 몬스터를 조종하며, 해당 몬스터의 고유 능력이 <b>자동으로 발동</b>됩니다.</li>
-                        <li>하단의 <b>'빙의 게이지'</b>는 <b>지속적으로 감소</b>합니다. 게이지가 0이 되면 숙주가 파괴되고 당신은 잠시 무적 상태의 '유령'이 됩니다.</li>
-                        <li><b>'점프':</b> 게이지가 0이 되기 전에 다시 탭/클릭하여 <b>다른 몬스터로 갈아타야</b> 합니다. 이것이 '점프'입니다.</li>
-                    </ul>
-                    
-                    <h3>2. 몬스터(숙주) 특징</h3>
-                    <ul>
-                        <li><b>◻️ 스켈레톤 (흰색):</b> [밸런스형] 가까운 적에게 뼈다귀를 던집니다.</li>
-                        <li><b>🟩 좀비 (초록색):</b> [광역/방어형] 주변에 '부패 오라'를 방출합니다. 게이지가 매우 깁니다.</li>
-                        <li><b>🟪 박쥐 (보라색):</b> [기동/관통형] 전방으로 '초음파'를 쏩니다. 이동 속도가 매우 빠르지만 게이지가 짧습니다.</li>
-                        <li><b>(기타 몬스터 생략...)</b></li>
-                    </ul>
-                    
-                    <h3>3. 기능 (레벨 업)</h3>
-                    <ul>
-                        <li>적을 처치하고 '에코(💎)'를 모으면 레벨 업 합니다.</li>
-                        <li>레벨 업 시, 3가지 무작위 능력 중 하나를 선택합니다. (구현 예정)</li>
-                    </ul>
-                </div>
-                
                 <p id="final-score"></p>
                 <button id="start-button">시작하기</button>
+            </div>
+        </div>
+        
+        <div id="level-up-overlay" class="overlay">
+            <h2 id="level-up-title">LEVEL UP!</h2>
+            <div class="upgrade-card" data-upgrade="0">
+                <h3></h3>
+                <p></p>
+            </div>
+            <div class="upgrade-card" data-upgrade="1">
+                <h3></h3>
+                <p></p>
+            </div>
+            <div class="upgrade-card" data-upgrade="2">
+                <h3></h3>
+                <p></p>
             </div>
         </div>
         
@@ -294,85 +248,140 @@
             const canvas = document.getElementById('game-canvas');
             const ctx = canvas.getContext('2d');
             const gameOverlay = document.getElementById('game-overlay');
-            const overlayContent = document.getElementById('overlay-content-wrapper');
             const startButton = document.getElementById('start-button');
             const finalScoreDisplay = document.getElementById('final-score');
-            const infoButton = document.getElementById('info-button');
-            const instructions = document.getElementById('instructions');
-            const overlayMessage = document.getElementById('overlay-message');
             
             const scoreDisplay = document.getElementById('score');
             const levelDisplay = document.getElementById('level');
+            const expBar = document.getElementById('exp-bar');
             const gaugeContainer = document.getElementById('gauge-container');
             const gaugeBar = document.getElementById('gauge-bar');
+            
+            const levelUpOverlay = document.getElementById('level-up-overlay');
+            const upgradeCards = document.querySelectorAll('.upgrade-card');
 
             // --- 캔버스 크기 ---
             const VIEWPORT_WIDTH = gameContainer.clientWidth;
             const VIEWPORT_HEIGHT = gameContainer.clientHeight;
+            const PIXEL_SCALE = 2; // 픽셀 아트용 스케일
             canvas.width = VIEWPORT_WIDTH;
             canvas.height = VIEWPORT_HEIGHT;
+            ctx.imageSmoothingEnabled = false;
 
             // --- 게임 상태 및 설정 ---
-            let gameState = 'start'; // 'start', 'playing', 'over'
+            let gameState = 'START'; // 'START', 'PLAYING', 'PAUSED', 'OVER'
             let score = 0;
-            let level = 1;
             let gameLoopId = null;
             let frameCount = 0;
             
-            let spawnInterval = 180; // 3초 (60fps 기준)
+            let spawnInterval = 180; // 3초
             let nextSpawnFrame = spawnInterval;
-            let waveCount = 1; // 스폰되는 몹 수
+            let waveCount = 1;
 
             let player, enemies, projectiles, echoes;
 
             // --- 마우스/터치 위치 ---
             let targetPos = { x: VIEWPORT_WIDTH / 2, y: VIEWPORT_HEIGHT / 2 };
 
-            // --- 몬스터 속성 정의 ---
+            // --- 몬스터/플레이어/업그레이드 정의 (수정됨) ---
+            const PLAYER_COLOR = '#00FFFF';
+            const PLAYER_RADIUS = 4 * PIXEL_SCALE; // 8px
+            const PLAYER_SPEED_WISP = 2.5;
+
             const MOB_PROPERTIES = {
-                'skeleton': { gauge: 1000, attackType: 'bone', attackCooldown: 50, speed: 2, color: '#FFFFFF', hp: 1 },
-                'zombie': { gauge: 2000, attackType: 'aura', attackCooldown: 1, speed: 1.2, color: '#32CD32', hp: 3 },
-                'bat': { gauge: 600, attackType: 'sonic', attackCooldown: 30, speed: 3.5, color: '#9400D3', hp: 1 },
+                'skeleton': { gauge: 1000, attackType: 'bone', attackCooldown: 60, speed: 1.5, hp: 2, exp: 10, 
+                    sprite: ['0110','1111','0110','0110','1001'], color: '#FFFFFF' },
+                'zombie': { gauge: 1800, attackType: 'aura', attackCooldown: 10, speed: 0.8, hp: 5, exp: 20,
+                    sprite: ['0110','1111','0110','1111','1001'], color: '#32CD32' },
+                'bat': { gauge: 600, attackType: 'sonic', attackCooldown: 40, speed: 2.5, hp: 1, exp: 10, 
+                    sprite: ['10101','01110','00100'], color: '#9400D3' }, // 5x3 픽셀
+                'gargoyle': { gauge: 4000, attackType: 'none', attackCooldown: 999, speed: 0.5, hp: 10, exp: 30,
+                    sprite: ['01110','11111','11011','01110','01010'], color: '#888888' } // 5x5 픽셀
             };
             const MOB_TYPES = Object.keys(MOB_PROPERTIES);
-            const PLAYER_COLOR = '#00FFFF'; // 빙의 시 플레이어 색상
+            
+            // 업그레이드 풀 (수정됨)
+            const UPGRADE_POOL = [
+                { id: 'gauge_1', title: '숙주 안정화 I', desc: '빙의 게이지 총량이 15% 증가합니다.', apply: () => player.stats.maxGaugeMult += 0.15 },
+                { id: 'wisp_speed_1', title: '유령 기동력 I', desc: '유령 상태의 이동 속도가 10% 증가합니다.', apply: () => player.stats.wispSpeedMult += 0.1 },
+                { id: 'jump_nova', title: '소울 노바', desc: '새로운 숙주로 \'점프\'할 때 주변에 폭발을 일으킵니다.', apply: () => player.stats.jumpNova = true },
+                { id: 'attack_speed_1', title: '공격 속도 I', desc: '숙주의 공격 속도가 10% 증가합니다.', apply: () => player.stats.attackSpeedMult += 0.1 },
+                { id: 'aura_size_1', title: '부패 오라 확장 I', desc: '좀비의 오라 범위가 15% 증가합니다.', apply: () => player.stats.auraSizeMult += 0.15 },
+                { id: 'bone_damage_1', title: '날카로운 뼈 I', desc: '스켈레톤의 뼈 데미지가 1 증가합니다.', apply: () => player.stats.boneDamage += 1 },
+                { id: 'sonic_damage_1', title: '초음파 강화 I', desc: '박쥐의 초음파 데미지가 1 증가합니다.', apply: () => player.stats.sonicDamage += 1 },
+                { id: 'gargoyle_gauge_1', title: '석화 피부 강화 I', desc: '가고일의 빙의 게이지가 20% 증가합니다.', apply: () => player.stats.maxGaugeMult += 0.2 },
+            ];
+            let currentUpgradeChoices = [];
 
-            // --- 플레이어 클래스 ---
+            // --- 픽셀 아트 그리기 함수 ---
+            function drawPixelSprite(spriteData, x, y, colorTint) {
+                const spriteHeight = spriteData.length;
+                const spriteWidth = spriteData[0].length;
+                
+                const startX = Math.floor(x - (spriteWidth * PIXEL_SCALE) / 2);
+                const startY = Math.floor(y - (spriteHeight * PIXEL_SCALE) / 2);
+
+                ctx.fillStyle = colorTint;
+                
+                for (let r = 0; r < spriteHeight; r++) {
+                    for (let c = 0; c < spriteWidth; c++) {
+                        if (spriteData[r][c] === '1') {
+                            ctx.fillRect(startX + c * PIXEL_SCALE, startY + r * PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
+                        }
+                    }
+                }
+            }
+            
+            // --- 클래스 정의 ---
+
             class Player {
-                constructor() {
+                constructor() { this.reset(); }
+                reset() {
                     this.x = VIEWPORT_WIDTH / 2;
                     this.y = VIEWPORT_HEIGHT / 2;
-                    this.radius = 10;
-                    this.state = 'WISP'; // 'WISP', 'HOST', 'UNPOSSESSING' (무적 시간)
+                    this.radius = PLAYER_RADIUS;
+                    this.state = 'WISP'; 
                     this.hostType = null;
                     this.gauge = 0;
                     this.maxGauge = 0;
-                    this.speed = 4; // 유령 이속
+                    this.speed = PLAYER_SPEED_WISP;
                     this.attackTimer = 0;
                     this.dashCooldown = 0;
-                    this.unpossessTimer = 0; // 무적 시간
+                    this.unpossessTimer = 0;
+                    
+                    this.level = 1;
+                    this.experience = 0;
+                    this.expToNextLevel = 100;
+                    
+                    // 업그레이드 스탯
+                    this.stats = {
+                        maxGaugeMult: 1.0,
+                        wispSpeedMult: 1.0,
+                        attackSpeedMult: 1.0,
+                        jumpNova: false,
+                        auraSizeMult: 1.0,
+                        boneDamage: 1,
+                        sonicDamage: 1, // (새로 추가)
+                    };
                 }
 
                 draw() {
-                    ctx.shadowBlur = 15; // 네온 효과
-                    
+                    ctx.shadowBlur = 10; 
                     if (this.state === 'WISP' || this.state === 'UNPOSSESSING') {
                         ctx.fillStyle = PLAYER_COLOR;
                         ctx.shadowColor = PLAYER_COLOR;
                         if(this.unpossessTimer > 0 && frameCount % 10 < 5) {
-                             ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; // 무적 깜빡임
-                             ctx.shadowColor = 'rgba(0, 255, 255, 0.5)';
+                             ctx.globalAlpha = 0.5; // 무적 깜빡임
                         }
                         ctx.beginPath();
                         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                         ctx.fill();
+                        ctx.globalAlpha = 1.0;
                     } else if (this.state === 'HOST') {
-                        ctx.fillStyle = PLAYER_COLOR; // 플레이어 색상으로 그림
-                        ctx.shadowColor = PLAYER_COLOR;
-                        // 몬스터 타입별로 '모양'만 그림
-                        drawMobShape(ctx, this.hostType, this.x, this.y);
+                        const spriteData = MOB_PROPERTIES[this.hostType].sprite;
+                        drawPixelSprite(spriteData, this.x, this.y, PLAYER_COLOR);
                     }
-                    ctx.shadowBlur = 0; // 네온 효과 리셋
+                    ctx.shadowBlur = 0;
                 }
 
                 update() {
@@ -382,20 +391,19 @@
                     }
                     if (this.dashCooldown > 0) this.dashCooldown--;
 
-                    // 이동 (목표 지점으로 부드럽게)
+                    // 이동
                     const dx = targetPos.x - this.x;
                     const dy = targetPos.y - this.y;
                     const dist = Math.hypot(dx, dy);
-                    if (dist > this.speed) {
-                        this.x += (dx / dist) * this.speed;
-                        this.y += (dy / dist) * this.speed;
+                    const currentSpeed = (this.state === 'HOST') ? this.speed : PLAYER_SPEED_WISP * this.stats.wispSpeedMult;
+                    if (dist > currentSpeed) {
+                        this.x += (dx / dist) * currentSpeed;
+                        this.y += (dy / dist) * currentSpeed;
                     }
                     
-                    // 숙주 상태 업데이트
                     if (this.state === 'HOST') {
                         this.gauge--;
-                        gaugeBar.style.width = `${(this.gauge / this.maxGauge) * 100}%`;
-                        
+                        gaugeBar.style.width = `${Math.max(0, (this.gauge / this.maxGauge) * 100)}%`;
                         if (this.gauge <= 0) this.unpossess();
                         
                         this.attackTimer--;
@@ -404,23 +412,40 @@
                 }
                 
                 attack() {
-                    // (TODO: 몬스터별 공격 로직)
+                    if (!this.hostType) return;
+                    const props = MOB_PROPERTIES[this.hostType];
+                    const attackCooldown = props.attackCooldown / (1.0 + this.stats.attackSpeedMult);
+                    this.attackTimer = Math.max(10, attackCooldown); 
+                    
+                    const target = findNearestEnemy(this.x, this.y);
+                    
+                    switch (this.hostType) {
+                        case 'skeleton':
+                            if (target) {
+                                projectiles.push(new Projectile(this.x, this.y, target, 'bone', this.stats.boneDamage));
+                            }
+                            break;
+                        case 'zombie':
+                            const auraRadius = 60 * this.stats.auraSizeMult;
+                            enemies.forEach(enemy => {
+                                if (Math.hypot(this.x - enemy.x, this.y - enemy.y) < auraRadius) {
+                                    enemy.takeDamage(1); // 오라 데미지는 1 고정
+                                }
+                            });
+                            break;
+                        case 'bat': // (새로 추가)
+                            if (target) {
+                                projectiles.push(new Projectile(this.x, this.y, target, 'sonic', this.stats.sonicDamage));
+                            }
+                            break;
+                    }
                 }
                 
                 dash() {
-                    if (this.dashCooldown > 0 || this.state === 'HOST') return; // 유령 상태일 때만 대시 가능
-                    this.dashCooldown = 30; // 0.5초 쿨타임
+                    if (this.dashCooldown > 0 || this.state === 'HOST') return; 
+                    this.dashCooldown = 30; 
                     
-                    let closestEnemy = null;
-                    let minDist = 150; // 대시 최대 거리
-                    
-                    enemies.forEach(enemy => {
-                        const dist = Math.hypot(this.x - enemy.x, this.y - enemy.y);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            closestEnemy = enemy;
-                        }
-                    });
+                    let closestEnemy = findNearestEnemy(this.x, this.y, 150); // 150px 범위 내
                     
                     if (closestEnemy) {
                         this.possess(closestEnemy);
@@ -428,15 +453,20 @@
                 }
 
                 possess(enemy) {
+                    if (this.stats.jumpNova) {
+                        // 점프 노바 (주변 적 데미지)
+                        projectiles.push(new Projectile(this.x, this.y, null, 'explosion', 5));
+                    }
+                    
                     this.state = 'HOST';
                     this.hostType = enemy.type;
                     const props = MOB_PROPERTIES[this.hostType];
-                    this.maxGauge = props.gauge;
+                    this.maxGauge = props.gauge * this.stats.maxGaugeMult;
                     this.gauge = this.maxGauge;
                     this.speed = props.speed;
-                    this.x = enemy.x; // 위치 동기화
+                    this.x = enemy.x;
                     this.y = enemy.y;
-                    targetPos.x = this.x; // 마우스 위치도 동기화
+                    targetPos.x = this.x; 
                     targetPos.y = this.y;
                     
                     gaugeContainer.style.display = 'block';
@@ -444,104 +474,173 @@
                 }
 
                 unpossess() {
-                    if (this.hostType === 'imp') { /* ... */ }
-                    this.state = 'UNPOSSESSING'; // 무적 상태
+                    this.state = 'UNPOSSESSING'; 
                     this.unpossessTimer = 90; // 1.5초 무적
                     this.hostType = null;
                     this.gauge = 0;
-                    this.speed = 4; // 유령 이속
                     gaugeContainer.style.display = 'none';
+                }
+                
+                collectExp(value) {
+                    if (gameState !== 'PLAYING') return; // 레벨업 중 경험치 획득 방지
+                    this.experience += value;
+                    if (this.experience >= this.expToNextLevel) {
+                        this.levelUp();
+                    }
+                    expBar.style.transform = `scaleX(${this.experience / this.expToNextLevel})`;
+                }
+                
+                levelUp() {
+                    gameState = 'PAUSED'; 
+                    this.level++;
+                    this.experience -= this.expToNextLevel; // 남은 경험치 이월
+                    this.expToNextLevel = Math.floor(this.expToNextLevel * 1.5);
+                    
+                    levelDisplay.textContent = `Lv. ${this.level}`;
+                    expBar.style.transform = `scaleX(${Math.max(0, this.experience / this.expToNextLevel)})`;
+                    
+                    currentUpgradeChoices = getRandomUpgrades(3);
+                    for (let i = 0; i < 3; i++) {
+                        upgradeCards[i].querySelector('h3').textContent = currentUpgradeChoices[i].title;
+                        upgradeCards[i].querySelector('p').textContent = currentUpgradeChoices[i].desc;
+                    }
+                    levelUpOverlay.classList.add('visible');
+                    
+                    // 레벨이 더 오를 수 있으면
+                    if (this.experience >= this.expToNextLevel) {
+                        // (간단화) 여기서는 1레벨업만 처리
+                        this.experience = this.expToNextLevel - 1; 
+                    }
                 }
             }
             
-            // 몬스터 클래스 (그래픽 수정)
             class Enemy {
                 constructor(x, y, type) {
                     this.x = x;
                     this.y = y;
                     this.type = type;
-                    this.radius = 12;
                     this.props = MOB_PROPERTIES[type];
+                    this.hp = this.props.hp;
+                    this.radius = 8 * PIXEL_SCALE; 
                     this.color = this.props.color;
+                    this.sprite = this.props.sprite;
+                    this.speed = this.props.speed;
+                }
+                draw() {
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 10;
+                    drawPixelSprite(this.sprite, this.x, this.y, this.color);
+                    ctx.shadowBlur = 0;
+                }
+                update() {
+                    const dx = player.x - this.x;
+                    const dy = player.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist > this.radius) { 
+                        this.x += dx / dist * this.speed * 0.5; 
+                        this.y += dy / dist * this.speed * 0.5;
+                    }
+                }
+                takeDamage(amount) {
+                    this.hp -= amount;
+                    if (this.hp <= 0) {
+                        this.die();
+                    }
+                }
+                die() {
+                    score += this.props.exp; 
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    echoes.push(new Echo(this.x, this.y, this.props.exp));
+                    enemies = enemies.filter(e => e !== this);
+                }
+            }
+            
+            class Projectile {
+                constructor(x, y, target, type, damage) {
+                    this.x = x;
+                    this.y = y;
+                    this.type = type;
+                    this.damage = damage;
+                    this.radius = 2 * PIXEL_SCALE;
+                    this.speed = (type === 'sonic') ? 8 : 5;
+                    this.life = 60; // 1초 수명
+                    
+                    if (type === 'explosion') {
+                        this.radius = 50;
+                        this.life = 10; // 0.16초
+                    } else if (target) {
+                        const dx = target.x - this.x;
+                        const dy = target.y - this.y;
+                        const dist = Math.hypot(dx, dy);
+                        this.dx = (dx / dist) * this.speed;
+                        this.dy = (dy / dist) * this.speed;
+                    } else { // 타겟이 없으면 (예: 점프 노바)
+                        this.dx = 0; this.dy = 0; 
+                    }
+                }
+                draw() {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.shadowColor = '#FFFFFF';
+                    ctx.shadowBlur = 5;
+                    switch(this.type) {
+                        case 'bone':
+                            ctx.fillRect(this.x - 2, this.y - 4, 4, 8); // 2x4 픽셀
+                            break;
+                        case 'sonic':
+                            ctx.fillRect(this.x - 4, this.y - 1, 8, 2); // 4x1 픽셀
+                            break;
+                        case 'explosion':
+                            ctx.strokeStyle = '#FFFF00';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, this.radius * (1 - this.life/10), 0, Math.PI*2);
+                            ctx.stroke();
+                            break;
+                    }
+                    ctx.shadowBlur = 0;
+                }
+                update() {
+                    this.life--;
+                    if (this.type !== 'explosion') {
+                        this.x += this.dx;
+                        this.y += this.dy;
+                    }
+                }
+            }
+            
+            class Echo { // 경험치
+                constructor(x, y, value) {
+                    this.x = x;
+                    this.y = y;
+                    this.value = value;
+                    this.radius = 3 * PIXEL_SCALE;
+                    this.color = '#FFFF00'; // 노란색
+                    this.pickupRadius = 60;
                 }
                 draw() {
                     ctx.fillStyle = this.color;
                     ctx.shadowColor = this.color;
                     ctx.shadowBlur = 10;
-                    drawMobShape(ctx, this.type, this.x, this.y);
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
                     ctx.shadowBlur = 0;
                 }
                 update() {
-                    // 플레이어 방향으로 천천히 이동
-                    const dx = player.x - this.x;
-                    const dy = player.y - this.y;
-                    const dist = Math.hypot(dx, dy);
-                    if (dist > 30) { // 너무 가까우면 멈춤
-                        this.x += dx / dist * 0.5; // 0.5 속도로 이동
-                        this.y += dy / dist * 0.5;
+                    // 플레이어 근처로 끌어당겨짐
+                    const dist = Math.hypot(player.x - this.x, player.y - this.y);
+                    if (dist < this.pickupRadius) {
+                        const dx = player.x - this.x;
+                        const dy = player.y - this.y;
+                        this.x += dx * 0.1;
+                        this.y += dy * 0.1;
                     }
                 }
             }
-            
-            // 몬스터 모양 그리기 함수 (새로 추가)
-            function drawMobShape(ctx, type, x, y) {
-                switch(type) {
-                    case 'skeleton':
-                        ctx.beginPath();
-                        ctx.arc(x, y - 8, 8, 0, Math.PI * 2); // 머리
-                        ctx.fill();
-                        ctx.fillRect(x - 5, y + 2, 10, 12); // 몸
-                        break;
-                    case 'zombie':
-                        ctx.beginPath();
-                        ctx.moveTo(x - 10, y - 15);
-                        ctx.lineTo(x + 10, y - 15);
-                        ctx.arcTo(x + 15, y - 15, x + 15, y - 10, 5);
-                        ctx.lineTo(x + 15, y + 10);
-                        ctx.arcTo(x + 15, y + 15, x + 10, y + 15, 5);
-                        ctx.lineTo(x - 10, y + 15);
-                        ctx.arcTo(x - 15, y + 15, x - 15, y + 10, 5);
-                        ctx.lineTo(x - 15, y - 10);
-                        ctx.arcTo(x - 15, y - 15, x - 10, y - 15, 5);
-                        ctx.closePath();
-                        ctx.fill();
-                        break;
-                    case 'bat':
-                        ctx.beginPath();
-                        ctx.moveTo(x, y + 8);
-                        ctx.lineTo(x - 15, y - 8);
-                        ctx.lineTo(x - 8, y - 3);
-                        ctx.lineTo(x, y - 10);
-                        ctx.lineTo(x + 8, y - 3);
-                        ctx.lineTo(x + 15, y - 8);
-                        ctx.closePath();
-                        ctx.fill();
-                        break;
-                    // (TODO: 다른 몹 모양 추가)
-                    default:
-                        ctx.beginPath();
-                        ctx.arc(x, y, 12, 0, Math.PI * 2);
-                        ctx.fill();
-                }
-            }
-
 
             // --- 이벤트 리스너 ---
             
-            // 시작 버튼
-            startButton.addEventListener('click', handleStartButton);
-            
-            // 정보 버튼 (수정됨)
-            infoButton.addEventListener('click', () => {
-                // 게임이 시작되지 않았을 때만 정보창 토글
-                if (gameState === 'playing') return;
-                
-                if (gameOverlay.dataset.mode === 'info') {
-                    setupStartScreen(); // 정보 -> 시작
-                } else {
-                    showInfo(); // 시작 -> 정보
-                }
-            });
+            startButton.addEventListener('click', startGame);
             
             // 이동
             canvas.addEventListener('mousemove', e => {
@@ -558,82 +657,100 @@
             
             // 대시/빙의
             canvas.addEventListener('mousedown', e => {
-                if (gameState === 'playing' && player.state !== 'HOST') player.dash();
+                if (gameState === 'PLAYING') player.dash();
             });
             canvas.addEventListener('touchstart', e => {
-                if (e.target === canvas && gameState === 'playing' && player.state !== 'HOST') {
-                    // 이미 이동(touchmove)이 시작된 게 아니면
-                    if (e.touches.length === 1) { 
-                        player.dash();
-                    }
+                if (e.target === canvas && gameState === 'PLAYING') {
+                    player.dash();
                 }
             }, { passive: false });
+            
+            // 업그레이드 카드 클릭
+            upgradeCards.forEach((card, index) => {
+                card.addEventListener('click', () => {
+                    if (gameState !== 'PAUSED') return;
+                    currentUpgradeChoices[index].apply();
+                    gameState = 'PLAYING';
+                    levelUpOverlay.classList.remove('visible');
+                    gameLoop(); // 루프 재시작
+                });
+            });
 
+
+            // --- 유틸리티 함수 ---
+            function findNearestEnemy(x, y, maxDist = Infinity) {
+                let closestEnemy = null;
+                let minDist = maxDist;
+                enemies.forEach(enemy => {
+                    const dist = Math.hypot(x - enemy.x, y - enemy.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestEnemy = enemy;
+                    }
+                });
+                return closestEnemy;
+            }
+            
+            function getRandomUpgrades(num) {
+                const shuffled = [...UPGRADE_POOL].sort(() => 0.5 - Math.random());
+                return shuffled.slice(0, num);
+            }
 
             // --- 핵심 함수 ---
 
-            function handleStartButton() {
-                if (gameOverlay.dataset.mode === 'info') {
-                    setupStartScreen();
-                } else {
-                    startGame();
-                }
-            }
-
             function setupStartScreen(isGameOver = false) {
-                gameOverlay.dataset.mode = 'start';
-                instructions.style.display = 'none';
-                overlayMessage.style.display = 'block';
-                finalScoreDisplay.style.display = isGameOver ? 'block' : 'none';
-                startButton.textContent = isGameOver ? '다시하기' : '시작하기';
-                gameOverlay.classList.remove('hidden');
-            }
-            
-            function showInfo() {
-                gameOverlay.dataset.mode = 'info';
-                instructions.style.display = 'block'; 
-                overlayMessage.style.display = 'none'; 
-                finalScoreDisplay.style.display = 'none';
-                startButton.textContent = '돌아가기';
-                gameOverlay.classList.remove('hidden');
-                
-                // *** 스크롤을 맨 위로 리셋 (핵심 수정) ***
-                instructions.scrollTop = 0;
+                gameState = 'START';
+                if (isGameOver) {
+                    finalScoreDisplay.textContent = `최종 점수: ${score}`;
+                    finalScoreDisplay.style.display = 'block';
+                    startButton.textContent = '다시하기';
+                } else {
+                    finalScoreDisplay.style.display = 'none';
+                    startButton.textContent = '시작하기';
+                }
+                gameOverlay.classList.add('visible');
             }
 
             function startGame() {
                 score = 0;
-                level = 1;
                 frameCount = 0;
                 waveCount = 1;
-                spawnInterval = 180; // 3초
+                spawnInterval = 180; 
                 nextSpawnFrame = 0;
                 
                 scoreDisplay.textContent = `Score: 0`;
-                levelDisplay.textContent = `Lv. 1`;
                 
                 player = new Player();
+                levelDisplay.textContent = `Lv. ${player.level}`;
+                expBar.style.transform = `scaleX(0)`;
+                
                 enemies = [];
                 projectiles = [];
                 echoes = [];
 
-                gameState = 'playing';
-                gameOverlay.classList.add('hidden');
+                gameState = 'PLAYING';
+                gameOverlay.classList.remove('visible');
                 
-                gameLoop();
+                gameLoop(); // 루프 시작
             }
 
             function endGame() {
-                gameState = 'over';
+                gameState = 'OVER';
                 cancelAnimationFrame(gameLoopId);
-                
-                finalScoreDisplay.textContent = `최종 점수: ${score}`;
-                setupStartScreen(true); // 게임 오버 상태로 시작 화면 설정
+                setupStartScreen(true); 
             }
             
             // 스폰 로직 (수정됨)
             function spawnEnemies() {
                 frameCount++;
+                
+                // 10초까지는 3초에 1마리
+                if (frameCount < 600 && frameCount % 180 !== 0) {
+                    if (frameCount === 60) { // 1초 뒤 1마리 스폰 (튜토리얼용)
+                         enemies.push(new Enemy(VIEWPORT_WIDTH / 2, 50, 'skeleton'));
+                    }
+                    return;
+                }
                 
                 if (frameCount > nextSpawnFrame) {
                     for(let i=0; i < waveCount; i++) {
@@ -642,35 +759,61 @@
                         const type = MOB_TYPES[Math.floor(Math.random() * MOB_TYPES.length)];
                         enemies.push(new Enemy(x, y, type));
                     }
-                    
-                    // 다음 스폰 계산
                     nextSpawnFrame = frameCount + spawnInterval;
                 }
                 
                 // 30초마다 난이도 상승
-                if (frameCount % 1800 === 0) { // 1800 프레임 = 30초
-                    spawnInterval = Math.max(30, spawnInterval * 0.9); // 스폰 간격 10% 감소 (최소 0.5초)
-                    waveCount = Math.min(10, waveCount + 1); // 스폰 몹 수 증가 (최대 10마리)
+                if (frameCount % 1800 === 0 && frameCount > 0) { 
+                    spawnInterval = Math.max(30, spawnInterval * 0.9); 
+                    waveCount = Math.min(10, waveCount + 1); 
                 }
             }
             
             function checkCollisions() {
                 // 1. 유령 + 적 -> 게임 오버
-                if (player.state === 'WISP' && player.unpossessTimer <= 0) {
-                    enemies.forEach(enemy => {
+                if (player.state === 'WISP') { 
+                    for (const enemy of enemies) {
                         if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.radius + enemy.radius) {
                             endGame();
+                            return; 
                         }
-                    });
+                    }
                 }
                 
-                // 2. 투사체 + 적 -> 적 죽음, 에코 생성
-                // 3. 플레이어 + 에코 -> 점수/경험치
+                // 2. 투사체 + 적
+                for (let i = projectiles.length - 1; i >= 0; i--) {
+                    const p = projectiles[i];
+                    let projectileHit = false;
+                    
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        const e = enemies[j];
+                        if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius) {
+                            e.takeDamage(p.damage);
+                            projectileHit = true;
+                        }
+                    }
+                    
+                    if (projectileHit && p.type !== 'explosion') {
+                        projectiles.splice(i, 1);
+                    }
+                }
+                
+                // 3. 플레이어 + 에코
+                for (let i = echoes.length - 1; i >= 0; i--) {
+                    const e = echoes[i];
+                    if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius + 10) {
+                        player.collectExp(e.value);
+                        echoes.splice(i, 1);
+                    }
+                }
             }
 
             // --- 메인 게임 루프 ---
             function gameLoop() {
-                if (gameState !== 'playing') return;
+                if (gameState !== 'PLAYING') {
+                    cancelAnimationFrame(gameLoopId);
+                    return;
+                }
                 gameLoopId = requestAnimationFrame(gameLoop);
 
                 // 1. 클리어
@@ -683,17 +826,20 @@
                 // 3. 업데이트
                 player.update();
                 enemies.forEach(e => e.update());
-                // (TODO: projectiles.forEach(p => p.update()));
-                // (TODO: echoes.forEach(e => e.update()));
+                projectiles.forEach(p => p.update());
+                echoes.forEach(e => e.update());
                 
                 // 4. 충돌
                 checkCollisions();
                 
                 // 5. 그리기
-                // (TODO: projectiles.forEach(p => p.draw()));
-                // (TODO: echoes.forEach(e => e.draw()));
+                projectiles.forEach(p => p.draw());
+                echoes.forEach(e => e.draw());
                 enemies.forEach(e => e.draw());
-                player.draw(); // 플레이어를 가장 위에 그리기
+                player.draw(); 
+                
+                // 6. 투사체 제거 (수명)
+                projectiles = projectiles.filter(p => p.life > 0);
             }
             
             // 초기 화면 설정
