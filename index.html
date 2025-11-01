@@ -131,7 +131,7 @@
         }
 
 
-        /* --- 오버레이 공통 (수정됨) --- */
+        /* --- 오버레이 공통 --- */
         .overlay {
             position: absolute;
             top: 0; left: 0;
@@ -856,9 +856,11 @@
                         this.die();
                     }
                 }
-                die() {
-                    const exp = this.props.exp * (this.isElite ? 3 : 1); 
-                    echoes.push(new Echo(this.x, this.y, exp));
+                die(giveExp = true) { // (수정)
+                    if (giveExp) {
+                        const exp = this.props.exp * (this.isElite ? 3 : 1); 
+                        echoes.push(new Echo(this.x, this.y, exp));
+                    }
                     for(let i=0; i < 5; i++) {
                         particles.push(new Particle(this.x, this.y, (Math.random()-0.5)*3, (Math.random()-0.5)*3, 30, this.color, 'pixel'));
                     }
